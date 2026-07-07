@@ -9,6 +9,8 @@ See [vm-100-haos.md](../vm-100-haos.md) for the VM/infra side (BBR, IP ban, etc.
   saga, quiet hours).
 - **[integrations.md](integrations.md)** — HA integration inventory: what's
   connected, what changed recently, what was tried and abandoned (and why).
+- **[haos-bbr-fix.md](haos-bbr-fix.md)** — HAOS core update failure diagnosis
+  (TLS/BBR networking issue specific to the HAOS VM).
 
 Maintained from the HA-device Claude instance; pushed here as the source of truth
 for anything HA-instance-specific. Cross-system docs (Jellyfin, remote access,
