@@ -67,8 +67,12 @@ camera ingest.)
 - [x] HAOS VM up + HA accessible
 - [x] Integrations reconnect (Tesla, Ratgdo, Tapo, etc.)
 - [ ] Move UPS USB cable RPi → Vostro, verify NUT
-- [ ] Install Mosquitto add-on (for Frigate MQTT — optional)
-- [ ] Switch HA Assist to native Claude/Anthropic conversation agent (Ollama dropped)
+- [x] Mosquitto add-on installed and in active use (Frigate MQTT events; confirmed
+  working 2026-07-08 via extensive automation testing on the HA instance)
+- [x] HA Assist switched to native Claude/Anthropic conversation agent (Ollama dropped)
+- See [docs/homeassistant/](homeassistant/) for the full HA-instance automation/
+  integration inventory (person/car detection, TV casting, sleep-schedule AC,
+  presence tracking, etc.) — maintained from the HA-device Claude instance.
 
 ### Proxmox/LXC-side
 - [x] CT 101 Ollama — built then stopped/dropped (GPU plan)
