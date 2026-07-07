@@ -1,0 +1,32 @@
+# Secrets & credentials - NEVER commit these
+secrets.yaml
+.storage/
+.cloud/
+*.key
+*.pem
+known_devices.yaml
+
+# Runtime state / not config
+home-assistant_v2.db
+home-assistant_v2.db-shm
+home-assistant_v2.db-wal
+home-assistant.log*
+*.log
+.ha_run.lock
+ip_bans.yaml
+
+# Caches / reproducible / not meaningful to version
+.cache/
+.claude/
+.claudecode/
+deps/
+tts/
+__pycache__/
+*.pyc
+
+# One-off exports, not authoritative
+host.zip
+
+# OS cruft
+.DS_Store
+vm-100-haos/custom_components/

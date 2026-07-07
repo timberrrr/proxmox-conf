@@ -1,0 +1,669 @@
+# Tesla Dashboard Card (2026.2+ compatible)
+# Dependencies: card_mod only (via HACS)
+# Helpers needed: 4x input_boolean (tess_charger_menu, tess_controls_menu, tess_climate_menu, tess_location_menu)
+
+type: vertical-stack
+cards:
+  # ── MAIN VIEW ────────────────────────────────────────────────────────────────
+  - type: conditional
+    condition: and
+    conditions:
+      - entity: input_boolean.tess_charger_menu
+        state: 'off'
+      - entity: input_boolean.tess_controls_menu
+        state: 'off'
+      - entity: input_boolean.tess_climate_menu
+        state: 'off'
+      - entity: input_boolean.tess_location_menu
+        state: 'off'
+    card:
+      type: picture-elements
+      image: https://i.imgur.com/y1kknRb.jpg
+      elements:
+        # Range — grey when not charging
+        - type: conditional
+          conditions:
+            - entity: sensor.tess_charging
+              state_not: 'Charging'
+          elements:
+            - type: state-label
+              entity: sensor.tess_battery_range
+              tap_action: none
+              style:
+                top: 5.6%
+                left: 20%
+                font-weight: bold
+                font-size: 110%
+                color: '#8a8a8d'
+                font-family: gotham
+        # Range + charging info — green when charging
+        - type: conditional
+          conditions:
+            - entity: sensor.tess_charging
+              state: 'Charging'
+          elements:
+            - type: state-label
+              entity: sensor.tess_battery_range
+              tap_action: none
+              style:
+                top: 5.6%
+                left: 20%
+                font-weight: bold
+                font-size: 110%
+                color: green
+                font-family: gotham
+            - type: state-label
+              entity: sensor.tess_time_to_full_charge
+              suffix: ' remaining'
+              tap_action: none
+              style:
+                top: 10%
+                left: 31%
+                font-size: 75%
+                color: '#8a8a8d'
+                font-family: gotham
+            - type: icon
+              icon: mdi:lightning-bolt
+              tap_action: none
+              style:
+                top: 5.6%
+                left: 30%
+                color: green
+        # Wake / refresh button
+        - type: state-icon
+          show_name: true
+          title: Wake
+          entity: button.tess_wake
+          icon: mdi:refresh
+          style:
+            top: 9.5%
+            left: 90%
+            color: '#039be5'
+            width: 40px
+            height: 50px
+          tap_action:
+            action: call-service
+            service: button.press
+            target:
+              entity_id: button.tess_wake
+        # Lock/unlock
+        - type: image
+          style:
+            top: 30%
+            left: 90%
+            width: 40px
+            height: 40px
+          state_image:
+            locked: https://raw.githubusercontent.com/ds2000/homeassistant-fe-tesla/main/images/buttons/Tesla_Door_Lock.jpg
+            unlocked: https://raw.githubusercontent.com/ds2000/homeassistant-fe-tesla/main/images/buttons/Tesla_Door_Unlock.jpg
+          tap_action:
+            action: toggle
+          entity: lock.tess_lock
+        # Climate toggle
+        - type: image
+          image: https://raw.githubusercontent.com/ds2000/homeassistant-fe-tesla/main/images/buttons/Tesla_Climate_Fan_On.jpg
+          style:
+            top: 50%
+            left: 90%
+            width: 40px
+            height: 40px
+          state_image:
+            'off': https://raw.githubusercontent.com/ds2000/homeassistant-fe-tesla/main/images/buttons/Tesla_Climate_Fan_Off.jpg
+          tap_action:
+            action: toggle
+          entity: climate.tess_climate
+        # Charging menu button
+        - type: image
+          image: https://raw.githubusercontent.com/ds2000/homeassistant-fe-tesla/main/images/buttons/Tesla_Charge_Port_Closed.jpg
+          style:
+            top: 72%
+            left: 90%
+            width: 40px
+            height: 40px
+          tap_action:
+            action: toggle
+          entity: input_boolean.tess_charger_menu
+        # Frunk button
+        - type: image
+          image: https://raw.githubusercontent.com/ds2000/homeassistant-fe-tesla/main/images/buttons/Tesla_Frunk_Closed.jpg
+          style:
+            top: 90%
+            left: 90%
+            width: 40px
+            height: 40px
+          state_image:
+            open: https://raw.githubusercontent.com/ds2000/homeassistant-fe-tesla/main/images/buttons/Tesla_Frunk_Opened.jpg
+          tap_action:
+            action: toggle
+          entity: cover.tess_frunk
+        # Charge port door overlay
+        - type: conditional
+          conditions:
+            - entity: cover.tess_charge_port_door
+              state: open
+          elements:
+            - type: image
+              style:
+                top: 35%
+                left: 35%
+                width: 85%
+              image: https://i.imgur.com/m0KWGbq.jpg
+        # Frunk open overlay
+        - type: conditional
+          conditions:
+            - entity: cover.tess_frunk
+              state: open
+          elements:
+            - type: image
+              style:
+                top: 35%
+                left: 35%
+                width: 85%
+              image: https://raw.githubusercontent.com/ds2000/homeassistant-fe-tesla/main/images/models/y/silver/baseFrunkOpened.jpg
+        # Bottom menu buttons
+        - type: image
+          image: https://i.imgur.com/t6wTpK0.jpg
+          style:
+            top: 68%
+            left: 43%
+            width: 85%
+          tap_action:
+            action: toggle
+          entity: input_boolean.tess_controls_menu
+        - type: image
+          image: https://i.imgur.com/Ev2ROVh.jpg
+          style:
+            top: 79%
+            left: 43%
+            width: 85%
+          tap_action:
+            action: toggle
+          entity: input_boolean.tess_climate_menu
+        - type: image
+          image: https://i.imgur.com/Ob94QLe.jpg
+          style:
+            top: 91%
+            left: 43%
+            width: 85%
+          tap_action:
+            action: toggle
+          entity: input_boolean.tess_location_menu
+        # Climate status label
+        - type: conditional
+          conditions:
+            - entity: climate.tess_climate
+              state: heat_cool
+          elements:
+            - type: state-label
+              entity: sensor.tess_inside_temperature
+              prefix: 'Active - Interior '
+              tap_action: none
+              style:
+                top: 76.8%
+                left: 13%
+                font-size: 90%
+                transform: none
+                color: '#8a8a8d'
+                font-family: gotham
+        - type: conditional
+          conditions:
+            - entity: climate.tess_climate
+              state: 'off'
+          elements:
+            - type: state-label
+              entity: sensor.tess_inside_temperature
+              prefix: 'Interior '
+              tap_action: none
+              style:
+                top: 76.8%
+                left: 13%
+                font-size: 90%
+                transform: none
+                color: '#8a8a8d'
+                font-family: gotham
+        # Location label
+        - type: state-label
+          entity: device_tracker.tess_location
+          tap_action: none
+          style:
+            top: 89.3%
+            left: 13%
+            font-size: 90%
+            transform: none
+            color: '#8a8a8d'
+            font-family: gotham
+
+  # ── CHARGER MENU ─────────────────────────────────────────────────────────────
+  - type: conditional
+    conditions:
+      - entity: input_boolean.tess_charger_menu
+        state: 'on'
+    card:
+      type: vertical-stack
+      cards:
+        - type: picture-elements
+          image: https://i.imgur.com/KQ9sBgN.jpg
+          card_mod:
+            style: |
+              ha-card {
+                border-bottom-left-radius: 0 !important;
+                border-bottom-right-radius: 0 !important;
+              }
+          elements:
+            - type: image
+              image: https://raw.githubusercontent.com/ds2000/homeassistant-fe-tesla/main/images/buttons/Telsa_Back_Button.jpg
+              style:
+                top: 20%
+                left: 7%
+                width: 50px
+                height: 50px
+              tap_action:
+                action: toggle
+              entity: input_boolean.tess_charger_menu
+            - type: state-label
+              prefix: 'Charge limit: '
+              entity: number.tess_charge_limit
+              suffix: '%'
+              tap_action: none
+              style:
+                top: 7%
+                left: 15%
+                transform: none
+                font-family: gotham
+                color: white
+            # Charging stats — active
+            - type: conditional
+              conditions:
+                - entity: sensor.tess_charging
+                  state: 'Charging'
+              elements:
+                - type: state-label
+                  entity: sensor.tess_charge_rate
+                  tap_action: none
+                  style:
+                    top: 20%
+                    left: 15%
+                    transform: none
+                    color: '#8a8a8d'
+                    font-family: gotham
+                - type: state-label
+                  entity: sensor.tess_charge_energy_added
+                  suffix: ' kWh added'
+                  tap_action: none
+                  style:
+                    top: 20%
+                    left: 43%
+                    transform: none
+                    color: '#8a8a8d'
+                    font-family: gotham
+                - type: state-label
+                  entity: sensor.tess_charger_power
+                  tap_action: none
+                  style:
+                    top: 20%
+                    left: 70%
+                    transform: none
+                    color: '#8a8a8d'
+                    font-family: gotham
+            # Last session — not charging
+            - type: conditional
+              conditions:
+                - entity: sensor.tess_charging
+                  state_not: 'Charging'
+              elements:
+                - type: state-label
+                  entity: sensor.tess_charge_energy_added
+                  suffix: ' kWh added last session'
+                  tap_action: none
+                  style:
+                    top: 20%
+                    left: 15%
+                    transform: none
+                    color: '#8a8a8d'
+                    font-family: gotham
+        # Charge limit slider (native tile — no custom card needed)
+        - type: tile
+          entity: number.tess_charge_limit
+          name: Charge Limit
+          features:
+            - type: numeric-input
+              style: slider
+          card_mod:
+            style: |
+              ha-card {
+                border-radius: 0 !important;
+              }
+        # Charge current slider
+        - type: tile
+          entity: number.tess_charge_current
+          name: Charge Current
+          features:
+            - type: numeric-input
+              style: slider
+          card_mod:
+            style: |
+              ha-card {
+                border-top-left-radius: 0 !important;
+                border-top-right-radius: 0 !important;
+              }
+
+  # ── CONTROLS MENU ────────────────────────────────────────────────────────────
+  - type: conditional
+    conditions:
+      - condition: state
+        entity: input_boolean.tess_controls_menu
+        state: 'on'
+    card:
+      type: picture-elements
+      image: https://i.imgur.com/LQHoi2S.jpg
+      elements:
+        - type: image
+          image: https://raw.githubusercontent.com/ds2000/homeassistant-fe-tesla/main/images/buttons/Telsa_Back_Button.jpg
+          style:
+            top: 8%
+            left: 7%
+            width: 50px
+            height: 50px
+          tap_action:
+            action: toggle
+          entity: input_boolean.tess_controls_menu
+        - type: image
+          style:
+            top: 57%
+            left: 36.8%
+            width: 40px
+            height: 40px
+          state_image:
+            locked: https://raw.githubusercontent.com/ds2000/homeassistant-fe-tesla/main/images/buttons/Tesla_Door_Lock.jpg
+            unlocked: https://raw.githubusercontent.com/ds2000/homeassistant-fe-tesla/main/images/buttons/Tesla_Door_Unlock.jpg
+          tap_action:
+            action: toggle
+          entity: lock.tess_lock
+        - type: state-label
+          entity: cover.tess_frunk
+          tap_action:
+            action: toggle
+          style:
+            top: 15%
+            left: 36.8%
+            font-size: 92%
+            color: white
+            font-family: gotham
+        - type: state-label
+          entity: cover.tess_trunk
+          tap_action:
+            action: toggle
+          style:
+            top: 85%
+            left: 36.8%
+            font-size: 92%
+            color: white
+            font-family: gotham
+        # Charging bolt — grey
+        - type: conditional
+          conditions:
+            - entity: sensor.tess_charging
+              state_not: 'Charging'
+          elements:
+            - type: icon
+              icon: mdi:lightning-bolt
+              tap_action:
+                action: toggle
+              entity: input_boolean.tess_charger_menu
+              style:
+                top: 84%
+                left: 17%
+                color: '#8a8a8d'
+        # Charging bolt — green
+        - type: conditional
+          conditions:
+            - entity: sensor.tess_charging
+              state: 'Charging'
+          elements:
+            - type: icon
+              icon: mdi:lightning-bolt
+              tap_action:
+                action: toggle
+              entity: input_boolean.tess_charger_menu
+              style:
+                top: 84%
+                left: 17%
+                color: green
+        # Battery & range (replacing TPMS — your car doesn't have those sensors)
+        - type: state-label
+          entity: sensor.tess_battery_level
+          prefix: 'Battery: '
+          suffix: '%'
+          tap_action: none
+          style:
+            top: 22%
+            left: 12%
+            font-size: 92%
+            color: white
+            font-family: gotham
+        - type: state-label
+          entity: sensor.tess_battery_range
+          prefix: 'Range: '
+          tap_action: none
+          style:
+            top: 22%
+            left: 61%
+            font-size: 92%
+            color: white
+            font-family: gotham
+        - type: state-label
+          entity: sensor.tess_outside_temperature
+          prefix: 'Outside: '
+          tap_action: none
+          style:
+            top: 72%
+            left: 12%
+            font-size: 92%
+            color: white
+            font-family: gotham
+        - type: state-label
+          entity: sensor.tess_charging
+          prefix: 'Charge: '
+          tap_action: none
+          style:
+            top: 72%
+            left: 61%
+            font-size: 92%
+            color: white
+            font-family: gotham
+        # Action buttons
+        - type: image
+          entity: button.tess_flash_lights
+          image: https://raw.githubusercontent.com/ds2000/homeassistant-fe-tesla/main/images/buttons/Tesla_Flash_Lights_Button.jpg
+          style:
+            top: 20%
+            left: 90%
+            width: 60px
+            height: 60px
+          tap_action:
+            action: call-service
+            service: button.press
+            target:
+              entity_id: button.tess_flash_lights
+        - type: image
+          entity: button.tess_honk_horn
+          image: https://raw.githubusercontent.com/ds2000/homeassistant-fe-tesla/main/images/buttons/Tesla_Horn_Button.jpg
+          style:
+            top: 40%
+            left: 90%
+            width: 60px
+            height: 60px
+          tap_action:
+            action: call-service
+            service: button.press
+            target:
+              entity_id: button.tess_honk_horn
+        - type: image
+          image: https://raw.githubusercontent.com/ds2000/homeassistant-fe-tesla/main/images/buttons/Tesla_Remote_Start_Button_Off.jpg
+          style:
+            top: 60%
+            left: 90%
+            width: 58px
+            height: 60px
+          tap_action:
+            action: call-service
+            service: button.press
+            target:
+              entity_id: button.tess_keyless_driving
+        - type: image
+          state_image:
+            open: https://raw.githubusercontent.com/ds2000/homeassistant-fe-tesla/main/images/buttons/Tesla_Close_Windows_Button.jpg
+            closed: https://raw.githubusercontent.com/ds2000/homeassistant-fe-tesla/main/images/buttons/Tesla_Vent_Windows_Button.jpg
+          style:
+            top: 80%
+            left: 90%
+            width: 60px
+            height: 60px
+          tap_action:
+            action: toggle
+          entity: cover.tess_windows
+
+  # ── CLIMATE MENU ─────────────────────────────────────────────────────────────
+  - type: conditional
+    conditions:
+      - entity: input_boolean.tess_climate_menu
+        state: 'on'
+    card:
+      type: picture-elements
+      image: https://i.imgur.com/UENBxpv.jpg
+      elements:
+        - type: image
+          image: https://raw.githubusercontent.com/ds2000/homeassistant-fe-tesla/main/images/buttons/Telsa_Back_Button.jpg
+          style:
+            top: 8%
+            left: 7%
+            width: 50px
+            height: 50px
+          tap_action:
+            action: toggle
+          entity: input_boolean.tess_climate_menu
+        - type: image
+          entity: select.tess_seat_heater_front_left
+          image: https://raw.githubusercontent.com/ds2000/homeassistant-fe-tesla/main/images/buttons/Tesla_Heated_Seat_Off.jpg
+          style:
+            top: 31.2%
+            left: 23.9%
+            width: 25px
+            height: 25px
+          tap_action:
+            action: more-info
+        - type: image
+          entity: select.tess_seat_heater_front_right
+          image: https://raw.githubusercontent.com/ds2000/homeassistant-fe-tesla/main/images/buttons/Tesla_Heated_Seat_Off.jpg
+          style:
+            top: 31.2%
+            left: 40.3%
+            width: 25px
+            height: 25px
+          tap_action:
+            action: more-info
+        - type: state-label
+          prefix: 'Interior '
+          entity: sensor.tess_inside_temperature
+          tap_action: none
+          style:
+            top: 55%
+            left: 77%
+            font-size: 85%
+            color: '#8a8a8d'
+            font-family: gotham
+        - type: state-label
+          prefix: 'Exterior '
+          entity: sensor.tess_outside_temperature
+          tap_action: none
+          style:
+            top: 60%
+            left: 77%
+            font-size: 85%
+            color: '#8a8a8d'
+            font-family: gotham
+        - type: image
+          entity: climate.tess_climate
+          image: https://raw.githubusercontent.com/ds2000/homeassistant-fe-tesla/main/images/buttons/Tesla_Climate_Button_Power_Off.jpg
+          style:
+            top: 72%
+            left: 63%
+            width: 12%
+          tap_action:
+            action: toggle
+        - type: state-label
+          entity: climate.tess_climate
+          attribute: temperature
+          suffix: °C
+          tap_action: none
+          style:
+            top: 72%
+            left: 77%
+            font-size: 160%
+            font-family: gotham
+            color: '#8a8a8d'
+        - type: image
+          entity: cover.tess_windows
+          image: https://raw.githubusercontent.com/ds2000/homeassistant-fe-tesla/main/images/buttons/Tesla_Vent_Windows_Button.jpg
+          style:
+            top: 72%
+            left: 91%
+            width: 13%
+          tap_action:
+            action: toggle
+        - type: image
+          entity: switch.tess_defrost
+          image: https://raw.githubusercontent.com/ds2000/homeassistant-fe-tesla/main/images/buttons/Tesla_Climate_Button_Defrost_Off_324.jpg
+          style:
+            top: 90%
+            left: 77%
+            width: 40%
+          tap_action:
+            action: toggle
+
+  # ── LOCATION MENU ────────────────────────────────────────────────────────────
+  - type: conditional
+    conditions:
+      - entity: input_boolean.tess_location_menu
+        state: 'on'
+    card:
+      type: vertical-stack
+      cards:
+        - type: picture-elements
+          image: https://i.imgur.com/h4kuRJT.jpg
+          card_mod:
+            style: |
+              ha-card {
+                border-bottom-left-radius: 0 !important;
+                border-bottom-right-radius: 0 !important;
+              }
+          elements:
+            - type: image
+              image: https://raw.githubusercontent.com/ds2000/homeassistant-fe-tesla/main/images/buttons/Telsa_Back_Button.jpg
+              style:
+                top: 45%
+                left: 7%
+                width: 50px
+                height: 50px
+              tap_action:
+                action: toggle
+              entity: input_boolean.tess_location_menu
+            - type: state-label
+              entity: device_tracker.tess_location
+              tap_action: none
+              style:
+                top: 45%
+                left: 50%
+                font-size: 120%
+                font-family: gotham
+                color: white
+        - type: map
+          entities:
+            - device_tracker.tess_location
+          aspect_ratio: '1:0.8'
+          card_mod:
+            style: |
+              ha-card {
+                border-top-left-radius: 0 !important;
+                border-top-right-radius: 0 !important;
+              }

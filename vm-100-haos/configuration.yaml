@@ -1,0 +1,59 @@
+
+# Loads default set of integrations. Do not remove.
+default_config:
+
+# Load frontend themes from the themes folder
+frontend:
+  themes: !include_dir_merge_named themes
+
+input_boolean:
+  tess_charger_menu:
+    name: Tess Charger Menu
+  tess_controls_menu:
+    name: Tess Controls Menu
+  tess_climate_menu:
+    name: Tess Climate Menu
+  tess_location_menu:
+    name: Tess Location Menu
+
+timer:
+  person_alert_inhibit:
+    name: "Person Alert Inhibit"
+  car_alert_inhibit:
+    name: "Car Alert Inhibit"
+
+template:
+  - sensor:
+      - name: "Heat Pump Tank Temperature"
+        unique_id: heat_pump_tank_temperature
+        state: "{{ state_attr('water_heater.heat_pump', 'current_temperature') }}"
+        unit_of_measurement: "°C"
+        device_class: temperature
+        state_class: measurement
+  - binary_sensor:
+      - name: "House Occupied"
+        unique_id: house_occupied
+        device_class: occupancy
+        state: "{{ is_state('person.tim', 'home') or is_state('person.sara', 'home') }}"
+
+automation: !include automations.yaml
+script: !include scripts.yaml
+scene: !include scenes.yaml
+
+homeassistant:
+  external_url: "https://ha-152-89-105-204.sslip.io"
+  internal_url: "http://192.168.1.2:8123"
+
+http:
+  use_x_forwarded_for: true
+  trusted_proxies:
+    - 172.30.33.0/24
+    - 127.0.0.1
+    - 192.168.1.16
+  ip_ban_enabled: true 	        # use this to enable auto IP ban
+  login_attempts_threshold: 3 	# set the number of allowed login attempts
+logger:
+  default: warning
+  logs:
+    custom_components.tuya_heat_pump: debug
+    tinytuya: debug

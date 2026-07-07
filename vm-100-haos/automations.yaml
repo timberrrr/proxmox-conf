@@ -1,0 +1,489 @@
+- alias: Camera - Upper Driveway Person → TV Clip
+  id: camera_upper_driveway_person_tv_clip
+  description: When Frigate detects a person on upper driveway and house is occupied,
+    wake TV on HDMI1, announce via TTS, and cast snapshot to the Chromecast
+  mode: single
+  triggers:
+    - trigger: state
+      entity_id: binary_sensor.upper_driveway_person_occupancy
+      to: "on"
+  conditions:
+    - condition: state
+      entity_id: binary_sensor.house_occupied
+      state: "on"
+    - condition: state
+      entity_id: media_player.hisense_55u7la_00a36ac8_television
+      state: "off"
+  actions:
+    - action: media_player.turn_on
+      target:
+        entity_id: media_player.hisense_55u7la_00a36ac8_television
+    - action: switch.turn_on
+      target:
+        entity_id: switch.hisense_55u7la_00a36ac8_mute
+    - action: media_player.select_source
+      target:
+        entity_id: media_player.hisense_55u7la_00a36ac8_television
+      data:
+        source: HDMI1
+    - action: switch.turn_off
+      target:
+        entity_id: switch.hisense_55u7la_00a36ac8_mute
+    - action: tts.speak
+      target:
+        entity_id: tts.google_translate_en_com
+      data:
+        media_player_entity_id: media_player.lounge_room_chromecast
+        message: There is someone at the top driveway
+    - delay: "00:00:04"
+    - action: media_player.play_media
+      target:
+        entity_id: media_player.lounge_room_chromecast
+      data:
+        media_content_id: "http://192.168.1.13:5000/api/upper_driveway/latest.jpg"
+        media_content_type: image/jpeg
+    - delay: "00:00:30"
+    - action: media_player.turn_off
+      target:
+        entity_id: media_player.lounge_room_chromecast
+    - action: media_player.turn_off
+      target:
+        entity_id: media_player.hisense_55u7la_00a36ac8_television
+    - action: switch.turn_off
+      target:
+        entity_id: switch.hisense_55u7la_00a36ac8_mute
+
+- alias: Camera - Person Detected
+  id: camera_person_detected
+  description: Send push notification when Frigate detects a person on any camera
+  mode: parallel
+  max: 3
+  triggers:
+  - trigger: state
+    entity_id:
+      - binary_sensor.upper_driveway_person_occupancy
+      - binary_sensor.lower_driveway_person_occupancy
+      - binary_sensor.backyard_person_occupancy
+    to: "on"
+  conditions:
+  - condition: state
+    entity_id: timer.person_alert_inhibit
+    state: idle
+  - condition: or
+    conditions:
+      - condition: state
+        entity_id: sun.sun
+        state: below_horizon
+      - condition: state
+        entity_id: binary_sensor.house_occupied
+        state: "off"
+  actions:
+  - variables:
+      camera: "{{ trigger.entity_id | replace('binary_sensor.', '') | replace('_person_occupancy',\
+        \ '') }}"
+      camera_label: "{{ camera | replace('_', ' ') | title }}"
+  - action: notify.mobile_app_moto_g54_5g
+    data:
+      title: Person Detected
+      message: "{{ camera_label }}"
+      data:
+        image: "http://192.168.1.13:5000/api/{{ camera }}/latest.jpg"
+        actions:
+          - action: INHIBIT_30
+            title: Ignore 30m
+          - action: INHIBIT_120
+            title: Ignore 2h
+          - action: INHIBIT_480
+            title: Ignore 8h
+
+- alias: Camera - Person Alert Inhibit Handler
+  id: camera_person_alert_inhibit_handler
+  description: Start inhibit timer when user taps ignore on person detection notification
+  mode: single
+  triggers:
+  - trigger: event
+    event_type: mobile_app_notification_action
+    event_data:
+      action: INHIBIT_30
+    id: inhibit_30
+  - trigger: event
+    event_type: mobile_app_notification_action
+    event_data:
+      action: INHIBIT_120
+    id: inhibit_120
+  - trigger: event
+    event_type: mobile_app_notification_action
+    event_data:
+      action: INHIBIT_480
+    id: inhibit_480
+  actions:
+  - choose:
+    - conditions:
+      - condition: trigger
+        id: inhibit_30
+      sequence:
+      - action: timer.start
+        target:
+          entity_id: timer.person_alert_inhibit
+        data:
+          duration: 00:30:00
+    - conditions:
+      - condition: trigger
+        id: inhibit_120
+      sequence:
+      - action: timer.start
+        target:
+          entity_id: timer.person_alert_inhibit
+        data:
+          duration: 02:00:00
+    - conditions:
+      - condition: trigger
+        id: inhibit_480
+      sequence:
+      - action: timer.start
+        target:
+          entity_id: timer.person_alert_inhibit
+        data:
+          duration: 08:00:00
+- alias: Garage Door - Nightly Close at 7pm or Unoccupied
+  id: garage_door_nightly_close
+  description: Flash shed light warning, then close garage door if open, turn light
+    off, at 7pm or whenever the house becomes unoccupied
+  mode: single
+  triggers:
+  - trigger: time
+    at: '19:00:00'
+  - trigger: state
+    entity_id: binary_sensor.house_occupied
+    to: "off"
+  actions:
+  - action: script.shed_light_flash_warning
+  - if:
+    - condition: state
+      entity_id: cover.ratgdov25i_433f0f_door
+      state: open
+    then:
+    - action: button.press
+      target:
+        entity_id: button.ratgdov25i_433f0f_toggle_door
+  - action: switch.turn_off
+    target:
+      entity_id: switch.plug_base_6210ha
+- alias: Shed Light - Follow Garage Door
+  id: shed_light_garage_door
+  description: Turn shed light on when garage door opens; flash warning then turn
+    off when it closes
+  mode: single
+  triggers:
+  - trigger: template
+    value_template: "{{ state_attr('cover.ratgdov25i_433f0f_door', 'current_position')
+      | int >= 50\n   and states('cover.ratgdov25i_433f0f_door') == 'opening' }}\n"
+    id: door_opened
+  - trigger: template
+    value_template: "{{ state_attr('cover.ratgdov25i_433f0f_door', 'current_position')
+      | int <= 50\n   and states('cover.ratgdov25i_433f0f_door') == 'closing' }}\n"
+    id: door_closed
+  - trigger: state
+    entity_id: cover.ratgdov25i_433f0f_door
+    to: closed
+    id: door_closed
+  actions:
+  - choose:
+    - conditions:
+      - condition: trigger
+        id: door_opened
+      sequence:
+      - action: switch.turn_on
+        target:
+          entity_id: switch.plug_base_6210ha
+    - conditions:
+      - condition: trigger
+        id: door_closed
+      sequence:
+      - action: switch.turn_off
+        target:
+          entity_id: switch.plug_base_6210ha
+
+- alias: Camera - Car Detected
+  id: camera_car_detected
+  description: Send push notification when Frigate detects a car on any camera, during hours of darkness
+  mode: parallel
+  max: 3
+  triggers:
+  - trigger: state
+    entity_id:
+      - binary_sensor.upper_driveway_car_occupancy
+      - binary_sensor.lower_driveway_car_occupancy
+      - binary_sensor.backyard_car_occupancy
+    to: "on"
+  conditions:
+  - condition: state
+    entity_id: timer.car_alert_inhibit
+    state: idle
+  - condition: or
+    conditions:
+      - condition: state
+        entity_id: sun.sun
+        state: below_horizon
+      - condition: state
+        entity_id: binary_sensor.house_occupied
+        state: "off"
+  - condition: not
+    conditions:
+      - condition: time
+        after: "21:00:00"
+        before: "05:00:00"
+  actions:
+  - variables:
+      camera: "{{ trigger.entity_id | replace('binary_sensor.', '') | replace('_car_occupancy',\
+        \ '') }}"
+      camera_label: "{{ camera | replace('_', ' ') | title }}"
+  - action: notify.mobile_app_moto_g54_5g
+    data:
+      title: Car Detected
+      message: "{{ camera_label }}"
+      data:
+        image: "http://192.168.1.13:5000/api/{{ camera }}/latest.jpg"
+        actions:
+          - action: CAR_INHIBIT_30
+            title: Ignore 30m
+          - action: CAR_INHIBIT_120
+            title: Ignore 2h
+          - action: CAR_INHIBIT_480
+            title: Ignore 8h
+
+- alias: Camera - Car Alert Inhibit Handler
+  id: camera_car_alert_inhibit_handler
+  description: Start inhibit timer when user taps ignore on car detection notification
+  mode: single
+  triggers:
+  - trigger: event
+    event_type: mobile_app_notification_action
+    event_data:
+      action: CAR_INHIBIT_30
+    id: inhibit_30
+  - trigger: event
+    event_type: mobile_app_notification_action
+    event_data:
+      action: CAR_INHIBIT_120
+    id: inhibit_120
+  - trigger: event
+    event_type: mobile_app_notification_action
+    event_data:
+      action: CAR_INHIBIT_480
+    id: inhibit_480
+  actions:
+  - choose:
+    - conditions:
+      - condition: trigger
+        id: inhibit_30
+      sequence:
+      - action: timer.start
+        target:
+          entity_id: timer.car_alert_inhibit
+        data:
+          duration: 00:30:00
+    - conditions:
+      - condition: trigger
+        id: inhibit_120
+      sequence:
+      - action: timer.start
+        target:
+          entity_id: timer.car_alert_inhibit
+        data:
+          duration: 02:00:00
+    - conditions:
+      - condition: trigger
+        id: inhibit_480
+      sequence:
+      - action: timer.start
+        target:
+          entity_id: timer.car_alert_inhibit
+        data:
+          duration: 08:00:00
+
+- alias: Zoe Bedroom AC - Evening Schedule
+  id: zoe_bedroom_ac_evening_schedule
+  description: Turn on warm mode at 7pm if house is occupied and bedroom is below
+    23C, turn off at 10pm
+  mode: single
+  triggers:
+  - trigger: time
+    at: '19:00:00'
+    id: "on"
+  - trigger: time
+    at: '22:00:00'
+    id: "off"
+  actions:
+  - choose:
+    - conditions:
+      - condition: trigger
+        id: "on"
+      - condition: state
+        entity_id: binary_sensor.house_occupied
+        state: "on"
+      - condition: numeric_state
+        entity_id: sensor.zoe_bedroom_indoor
+        below: 23
+      sequence:
+      - action: climate.set_hvac_mode
+        target:
+          entity_id: climate.zoe_bedroom
+        data:
+          hvac_mode: heat
+      - action: climate.set_temperature
+        target:
+          entity_id: climate.zoe_bedroom
+        data:
+          temperature: 22.5
+      - action: notify.mobile_app_moto_g54_5g
+        data:
+          title: Zoe AC
+          message: Turned on - heat mode, 22.5°C (evening schedule)
+    - conditions:
+      - condition: trigger
+        id: "off"
+      sequence:
+      - action: climate.set_hvac_mode
+        target:
+          entity_id: climate.zoe_bedroom
+        data:
+          hvac_mode: "off"
+
+- alias: Zoe Bedroom AC - Circadian Low Floor
+  id: zoe_bedroom_ac_early_morning_schedule
+  description: Turn on a 20C floor at 2am if house is occupied and bedroom is below
+    20C, to protect the circadian temperature nadir window, bump to 22C at 6am to
+    encourage waking, turn off at 7:30am
+  mode: single
+  triggers:
+  - trigger: time
+    at: '02:00:00'
+    id: "on"
+  - trigger: time
+    at: '06:00:00'
+    id: "bump"
+  - trigger: time
+    at: '07:30:00'
+    id: "off"
+  actions:
+  - choose:
+    - conditions:
+      - condition: trigger
+        id: "on"
+      - condition: state
+        entity_id: binary_sensor.house_occupied
+        state: "on"
+      - condition: numeric_state
+        entity_id: sensor.zoe_bedroom_indoor
+        below: 20
+      sequence:
+      - action: climate.set_hvac_mode
+        target:
+          entity_id: climate.zoe_bedroom
+        data:
+          hvac_mode: heat
+      - action: climate.set_temperature
+        target:
+          entity_id: climate.zoe_bedroom
+        data:
+          temperature: 20
+    - conditions:
+      - condition: trigger
+        id: "bump"
+      - condition: state
+        entity_id: binary_sensor.house_occupied
+        state: "on"
+      sequence:
+      - action: climate.set_hvac_mode
+        target:
+          entity_id: climate.zoe_bedroom
+        data:
+          hvac_mode: heat
+      - action: climate.set_temperature
+        target:
+          entity_id: climate.zoe_bedroom
+        data:
+          temperature: 22
+      - action: notify.mobile_app_moto_g54_5g
+        data:
+          title: Zoe AC
+          message: Bumped to 22°C (wake encouragement)
+    - conditions:
+      - condition: trigger
+        id: "off"
+      sequence:
+      - action: climate.set_hvac_mode
+        target:
+          entity_id: climate.zoe_bedroom
+        data:
+          hvac_mode: "off"
+      - action: notify.mobile_app_moto_g54_5g
+        data:
+          title: Zoe AC
+          message: Turned off (early morning schedule)
+
+- alias: Climate - All AC Off When Unoccupied
+  id: climate_all_ac_off_unoccupied
+  description: Turn off all house air conditioners when the house becomes unoccupied
+  mode: single
+  triggers:
+  - trigger: state
+    entity_id: binary_sensor.house_occupied
+    to: "off"
+  actions:
+  - action: climate.set_hvac_mode
+    target:
+      entity_id:
+        - climate.loft_aircon
+        - climate.zoe_bedroom
+    data:
+      hvac_mode: "off"
+
+- alias: Zoe AC - Unavailable Alert
+  id: zoe_ac_unavailable_alert
+  description: Alert if Zoe's AC (WF-RAC dongle) stays unavailable for 15+ minutes,
+    since the integration has no remote recovery/reboot capability - needs a manual
+    power cycle
+  mode: single
+  triggers:
+  - trigger: state
+    entity_id: climate.zoe_bedroom
+    to: "unavailable"
+    for: "00:15:00"
+  conditions:
+  - condition: not
+    conditions:
+      - condition: time
+        after: "21:00:00"
+        before: "05:00:00"
+  actions:
+  - action: notify.mobile_app_moto_g54_5g
+    data:
+      title: Zoe AC Offline
+      message: Zoe's AC control has been unreachable for 15+ minutes. This integration
+        has no remote fix - the dongle likely needs a manual power cycle.
+
+- alias: Loft AC - Unavailable Alert
+  id: loft_ac_unavailable_alert
+  description: Alert if Loft AC (WF-RAC dongle) stays unavailable for 15+ minutes,
+    since the integration has no remote recovery/reboot capability - needs a manual
+    power cycle
+  mode: single
+  triggers:
+  - trigger: state
+    entity_id: climate.loft_aircon
+    to: "unavailable"
+    for: "00:15:00"
+  conditions:
+  - condition: not
+    conditions:
+      - condition: time
+        after: "21:00:00"
+        before: "05:00:00"
+  actions:
+  - action: notify.mobile_app_moto_g54_5g
+    data:
+      title: Loft AC Offline
+      message: Loft AC control has been unreachable for 15+ minutes. This integration
+        has no remote fix - the dongle likely needs a manual power cycle.

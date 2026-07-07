@@ -1,0 +1,17 @@
+shed_light_flash_warning:
+  alias: "Shed Light - Flash Warning"
+  description: "Flash shed light at 1hz for 15 seconds as a warning"
+  sequence:
+    - repeat:
+        count: 15
+        sequence:
+          - action: switch.turn_on
+            target:
+              entity_id: switch.plug_base_6210ha
+          - delay:
+              milliseconds: 500
+          - action: switch.turn_off
+            target:
+              entity_id: switch.plug_base_6210ha
+          - delay:
+              milliseconds: 500
