@@ -487,3 +487,46 @@
       title: Loft AC Offline
       message: Loft AC control has been unreachable for 15+ minutes. This integration
         has no remote fix - the dongle likely needs a manual power cycle.
+
+- alias: UPS - Battery Warning
+  id: ups_battery_warning
+  description: Cyberpower UPS battery at or below Proxmox's battery.charge.warning
+    threshold (20%). Power is at risk - Proxmox hasn't started shutting VMs/containers
+    down yet, but will if the charge keeps dropping.
+  mode: single
+  triggers:
+  - trigger: numeric_state
+    entity_id: sensor.cyberpower_battery_charge
+    below: 21
+  actions:
+  - action: notify.mobile_app_moto_g54_5g
+    data:
+      title: UPS Battery Warning
+      message: >-
+        UPS battery at {{ states('sensor.cyberpower_battery_charge') }}% ({{
+        states('sensor.cyberpower_status') }}, load {{ states('sensor.cyberpower_load')
+        }}%). Proxmox will begin shutting everything down at 10%.
+
+- alias: UPS - Imminent Shutdown
+  id: ups_imminent_shutdown
+  description: Cyberpower UPS battery at or below Proxmox's battery.charge.low
+    threshold (10%) - Proxmox is about to shut the host and all VMs/containers
+    down.
+  mode: single
+  triggers:
+  - trigger: numeric_state
+    entity_id: sensor.cyberpower_battery_charge
+    below: 11
+  actions:
+  - action: notify.mobile_app_moto_g54_5g
+    data:
+      title: UPS SHUTDOWN IMMINENT
+      message: >-
+        UPS battery at {{ states('sensor.cyberpower_battery_charge') }}%.
+        Proxmox is shutting the host down now - everything is about to go
+        offline.
+      data:
+        priority: high
+        ttl: 0
+        importance: high
+        channel: alarm_stream
